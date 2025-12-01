@@ -1,4 +1,3 @@
-# backend/settlement_engine.py
 import pandas as pd
 import qrcode
 from io import BytesIO
@@ -64,8 +63,6 @@ def calculate_settlements(df_balance: pd.DataFrame) -> pd.DataFrame:
 
     return pd.DataFrame(settlements)
 
-
-# ---------- QR + PDF + CHART helpers ----------
 
 def settlements_text(df_settlement: pd.DataFrame) -> str:
     if df_settlement.empty:

@@ -2,16 +2,9 @@ import streamlit as st
 import pandas as pd
 import qrcode
 from io import BytesIO
-import base64
-
-import matplotlib.pyplot as plt
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-
-# ====================================
-# ✅ SETTLEMENT ENGINE
-# ====================================
 
 def calculate_balances(transactions):
     df = pd.DataFrame(transactions, columns=["Debtor", "Creditor", "Amount"])
@@ -60,10 +53,6 @@ def calculate_settlements(df_balance):
     return pd.DataFrame(settlements)
 
 
-# ====================================
-# ✅ QR GENERATOR
-# ====================================
-
 def generate_settlement_qr(df_settlement):
     if df_settlement.empty:
         return None
@@ -79,10 +68,6 @@ def generate_settlement_qr(df_settlement):
 
     return buffer.getvalue()
 
-
-# ====================================
-# ✅ PDF INVOICE WITH QR
-# ====================================
 
 def generate_invoice_pdf(df_settlement, qr_image_bytes):
     buffer = BytesIO()
@@ -110,25 +95,6 @@ def generate_invoice_pdf(df_settlement, qr_image_bytes):
     return buffer
 
 
-# ====================================
-# ✅ BALANCE CHART WITH QR
-# ====================================
-
-# def generate_balance_chart_with_qr(df_balance, qr_image_bytes):
-#     fig, ax = plt.subplots()
-#     ax.bar(df_balance["Name"], df_balance["FinalBalance"])
-#     ax.set_title("Final Balances")
-#     ax.set_ylabel("Amount")
-#
-#     qr_img = plt.imread(BytesIO(qr_image_bytes))
-#     fig.figimage(qr_img, xo=350, yo=50, alpha=0.9)
-#
-#     buffer = BytesIO()
-#     plt.savefig(buffer, format="png")
-#     plt.close()
-#     buffer.seek(0)
-#     return buffer
-
 def generate_balance_chart_with_qr(df_balance: pd.DataFrame, qr_bytes: bytes) -> bytes:
     import matplotlib.pyplot as plt
     from io import BytesIO
@@ -137,9 +103,6 @@ def generate_balance_chart_with_qr(df_balance: pd.DataFrame, qr_bytes: bytes) ->
     # Create main figure
     fig = plt.figure(figsize=(10, 5))
 
-    # -----------------------------
-    # ✅ LEFT: BAR CHART
-    # -----------------------------
     ax_chart = fig.add_axes([0.05, 0.15, 0.55, 0.75])  # [left, bottom, width, height]
 
     if not df_balance.empty:
@@ -149,18 +112,12 @@ def generate_balance_chart_with_qr(df_balance: pd.DataFrame, qr_bytes: bytes) ->
     ax_chart.set_ylabel("Amount")
     ax_chart.set_xlabel("People")
 
-    # -----------------------------
-    # ✅ RIGHT: QR CODE (SEPARATE AXIS)
-    # -----------------------------
     ax_qr = fig.add_axes([0.68, 0.20, 0.28, 0.60])
     qr_img = mpimg.imread(BytesIO(qr_bytes))
     ax_qr.imshow(qr_img)
     ax_qr.axis("off")
     ax_qr.set_title("Scan to Share")
 
-    # -----------------------------
-    # ✅ EXPORT IMAGE
-    # -----------------------------
     buffer = BytesIO()
     plt.savefig(buffer, format="png", dpi=150)
     plt.close(fig)
@@ -168,11 +125,6 @@ def generate_balance_chart_with_qr(df_balance: pd.DataFrame, qr_bytes: bytes) ->
 
     return buffer.getvalue()
 
-
-
-# ====================================
-# ✅ STREAMLIT UI
-# ====================================
 
 st.set_page_config(page_title="ClearLedger – Settlement System", layout="centered")
 st.title("💸 ClearLedger — Smart Group Settlement")
@@ -182,9 +134,6 @@ st.write("Dynamic settlement with CSV export, QR sharing, PDF invoices & charts 
 if "transactions" not in st.session_state:
     st.session_state.transactions = []
 
-# -------------------------
-# ➕ Add Transaction
-# -------------------------
 
 st.subheader("➕ Add Transaction")
 
@@ -205,10 +154,6 @@ with st.form("transaction_form"):
         else:
             st.error("All fields required!")
 
-# -------------------------
-# Show Transactions
-# -------------------------
-
 st.subheader("📄 Current Transactions")
 
 if st.session_state.transactions:
@@ -218,10 +163,6 @@ if st.session_state.transactions:
     ))
 else:
     st.info("No transactions yet.")
-
-# -------------------------
-# Compute Results
-# -------------------------
 
 st.subheader("🧮 Calculate")
 
@@ -263,9 +204,6 @@ if st.button("🚀 Calculate Final Results"):
         file_name="balances_chart_qr.png"
     )
 
-# -------------------------
-# Reset
-# -------------------------
 
 if st.button("🔄 Reset All"):
     st.session_state.transactions = []
