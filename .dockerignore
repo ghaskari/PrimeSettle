@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+.venv/
+venv/
+.env
+.git/
+.gitignore
+qr_temp.png
+final_*.csv

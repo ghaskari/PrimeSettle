@@ -93,6 +93,40 @@ You will see the **PrimeSettle Web UI directly from Flask** where you can:
 
 ---
 
+## 🟢 Run with Streamlit (Optional UI Mode)
+
+If you prefer using the **Streamlit UI** instead of Flask:
+
+### 1️⃣ Make sure you are in the project root
+
+```bash
+cd PrimeSettle
+```
+
+### 2️⃣ Start the Streamlit app
+
+```bash
+streamlit run app.py
+```
+
+### 3️⃣ Open in Browser
+
+After запуск, you will see a message similar to:
+
+```
+Local URL: http://localhost:8501
+```
+
+Open that URL in your browser to use the **full Streamlit interactive UI**.
+
+> ⚠️ Note:
+>
+> * Streamlit and Flask modes are **independent**
+> * Do **NOT** run both at the same time on the same port
+> * Flask is recommended for **API & production**, Streamlit is ideal for **local usage & demos**
+
+---
+
 ## 🔌 REST API Endpoints
 
 PrimeSettle can also be used as a pure backend:
@@ -142,6 +176,26 @@ curl -X POST http://127.0.0.1:5000/api/calculate \
 * ✅ JSON API responses for mobile / frontend apps
 
 ---
+
+## 🐳 Docker
+
+### Build Image
+
+```bash
+docker build -t primesettle .
+```
+
+### Run Container
+
+```bash
+docker run -p 5000:5000 primesettle
+```
+
+Then open:
+
+```
+http://127.0.0.1:5000
+```
 
 ## 📜 License
 
