@@ -104,13 +104,15 @@ PrimeSettle can also be used as a pure backend:
 | Invoice PDF   | POST   | `/api/invoice-pdf`   |
 | Balance Chart | POST   | `/api/balance-chart` |
 
-### ✅ Request Format (JSON)
+---
+
+## ✅ Request Format (JSON)
 
 ```json
 {
   "transactions": [
-    {"debtor": "Ghazal", "creditor": "Goli", "amount": 100},
-    {"debtor": "Yasi", "creditor": "Ghazal", "amount": 50}
+    {"debtor": "Person1", "creditor": "Person2", "amount": 100},
+    {"debtor": "Person3", "creditor": "Person1", "amount": 50}
   ]
 }
 ```
@@ -124,8 +126,8 @@ curl -X POST http://127.0.0.1:5000/api/calculate \
   -H "Content-Type: application/json" \
   -d '{
     "transactions": [
-      {"debtor": "Ghazal", "creditor": "Goli", "amount": 100},
-      {"debtor": "Yasi", "creditor": "Ghazal", "amount": 50}
+      {"debtor": "Person1", "creditor": "Person2", "amount": 100},
+      {"debtor": "Person3", "creditor": "Person1", "amount": 50}
     ]
   }'
 ```
@@ -138,37 +140,6 @@ curl -X POST http://127.0.0.1:5000/api/calculate \
 * ✅ Invoice PDF with QR
 * ✅ Balance Chart with QR
 * ✅ JSON API responses for mobile / frontend apps
-
----
-
-## 🔐 Production Notes
-
-This project uses Flask **development server** by default.
-
-For production deployment use:
-
-* ✅ Gunicorn
-* ✅ Docker
-* ✅ Nginx
-
-If you want, I can provide:
-
-* `Dockerfile`
-* `docker-compose.yml`
-* `gunicorn` config
-* Cloud deployment for VPS or Railway
-
----
-
-## 🧭 Roadmap (Optional Upgrades)
-
-* ✅ User authentication
-* ✅ Database storage (PostgreSQL / SQLite)
-* ✅ Multi-currency support
-* ✅ Persian UI
-* ✅ Telegram bot integration
-* ✅ Admin dashboard
-* ✅ Monthly reports
 
 ---
 
