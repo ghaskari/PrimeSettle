@@ -14,7 +14,7 @@ HTML_UI = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PrimeSettle – Backend UI</title>
+    <title>PrimeSettle — Fast, Fair, Final</title>
     <style>
         body { font-family: Arial; max-width: 900px; margin: 30px auto; }
         input, button { padding: 6px 10px; margin: 4px; }
@@ -25,7 +25,7 @@ HTML_UI = """
 </head>
 <body>
 
-<h1>💸 PrimeSettle – Direct Backend UI</h1>
+<h1>💸 PrimeSettle — Fast, Fair, Final</h1>
 
 <h3>Add Transaction</h3>
 <input id="debtor" placeholder="Debtor">

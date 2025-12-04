@@ -126,8 +126,8 @@ def generate_balance_chart_with_qr(df_balance: pd.DataFrame, qr_bytes: bytes) ->
     return buffer.getvalue()
 
 
-st.set_page_config(page_title="ClearLedger – Settlement System", layout="centered")
-st.title("💸 ClearLedger — Smart Group Settlement")
+st.set_page_config(page_title="PrimeSettle — Fast, Fair, Final", layout="centered")
+st.title("💸 PrimeSettle — Fast, Fair, Final")
 
 st.write("Dynamic settlement with CSV export, QR sharing, PDF invoices & charts ✅")
 
