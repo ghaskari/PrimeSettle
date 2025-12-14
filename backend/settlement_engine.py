@@ -2,15 +2,13 @@ import pandas as pd
 import qrcode
 from io import BytesIO
 import matplotlib.pyplot as plt
+
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
 
 def calculate_balances(transactions):
-    """
-    transactions: list of dicts like:
-      {"debtor": "...", "creditor": "...", "amount": 123}
-    """
     if not transactions:
         return pd.DataFrame(columns=["Name", "FinalBalance"])
 
@@ -21,67 +19,55 @@ def calculate_balances(transactions):
     balance = pd.Series(0.0, index=people)
 
     for _, row in df.iterrows():
-        balance[row["Debtor"]] -= float(row["Amount"])
-        balance[row["Creditor"]] += float(row["Amount"])
+        balance[row["Debtor"]] -= row["Amount"]
+        balance[row["Creditor"]] += row["Amount"]
 
-    df_balance = balance.reset_index()
-    df_balance.columns = ["Name", "FinalBalance"]
-    return df_balance
+    return balance.reset_index().rename(
+        columns={"index": "Name", 0: "FinalBalance"}
+    )
 
 
-def calculate_settlements(df_balance: pd.DataFrame) -> pd.DataFrame:
+def calculate_settlements(df_balance):
     if df_balance.empty:
         return pd.DataFrame(columns=["From", "To", "Amount"])
 
-    balance = pd.Series(
-        df_balance["FinalBalance"].values,
-        index=df_balance["Name"]
-    )
-
-    debtors = balance[balance < 0].abs()
-    creditors = balance[balance > 0]
+    bal = pd.Series(df_balance.FinalBalance.values, index=df_balance.Name)
+    debtors = bal[bal < 0].abs()
+    creditors = bal[bal > 0]
 
     settlements = []
 
-    for debtor, debt_amount in debtors.items():
-        for creditor in creditors.index:
-            if debt_amount <= 0:
+    for d, d_amt in debtors.items():
+        for c in creditors.index:
+            if d_amt <= 0:
                 break
-            if creditors[creditor] <= 0:
+            if creditors[c] <= 0:
                 continue
 
-            pay = min(debt_amount, creditors[creditor])
-
-            settlements.append({
-                "From": debtor,
-                "To": creditor,
-                "Amount": round(float(pay), 2)
-            })
-
-            debt_amount -= pay
-            creditors[creditor] -= pay
+            pay = min(d_amt, creditors[c])
+            settlements.append({"From": d, "To": c, "Amount": round(pay, 2)})
+            d_amt -= pay
+            creditors[c] -= pay
 
     return pd.DataFrame(settlements)
 
 
-def settlements_text(df_settlement: pd.DataFrame) -> str:
+def generate_settlement_qr_bytes(df_settlement):
     if df_settlement.empty:
-        return "No settlements."
-    lines = ["Final Settlements:", ""]
-    for _, row in df_settlement.iterrows():
-        lines.append(f"{row['From']} ➝ {row['To']} : {row['Amount']}")
-    return "\n".join(lines)
+        text = "No settlements required."
+    else:
+        text = "\n".join(
+            f"{r.From} ➝ {r.To} : {r.Amount}"
+            for r in df_settlement.itertuples()
+        )
 
-
-def generate_settlement_qr_bytes(df_settlement: pd.DataFrame) -> bytes:
-    text_payload = settlements_text(df_settlement)
-    qr = qrcode.make(text_payload)
+    qr = qrcode.make(text)
     buf = BytesIO()
     qr.save(buf, format="PNG")
     return buf.getvalue()
 
 
-def generate_invoice_pdf_bytes(df_settlement: pd.DataFrame, qr_bytes: bytes) -> bytes:
+def generate_invoice_pdf_bytes(df_settlement, qr_bytes):
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
 
@@ -89,20 +75,18 @@ def generate_invoice_pdf_bytes(df_settlement: pd.DataFrame, qr_bytes: bytes) -> 
     c.drawString(50, 800, "Settlement Invoice")
 
     c.setFont("Helvetica", 12)
-    y = 770
-    for _, row in df_settlement.iterrows():
-        line = f"{row['From']} ➝ {row['To']} : {row['Amount']}"
-        c.drawString(50, y, line)
-        y -= 20
-        if y < 100:
-            c.showPage()
-            y = 800
-            c.setFont("Helvetica", 12)
+    y = 760
 
-    # add QR
-    qr_buf = BytesIO(qr_bytes)
-    qr_path_like = qr_buf  # reportlab can take a file-like in newer versions
-    c.drawImage(qr_path_like, 380, 650, width=150, height=150)
+    for _, r in df_settlement.iterrows():
+        c.drawString(50, y, f"{r.From} ➝ {r.To} : {r.Amount}")
+        y -= 20
+        if y < 120:
+            c.showPage()
+            c.setFont("Helvetica", 12)
+            y = 780
+
+    qr_image = ImageReader(BytesIO(qr_bytes))
+    c.drawImage(qr_image, 380, 650, width=150, height=150)
     c.drawString(380, 630, "Scan to share")
 
     c.save()
@@ -110,19 +94,33 @@ def generate_invoice_pdf_bytes(df_settlement: pd.DataFrame, qr_bytes: bytes) -> 
     return buf.getvalue()
 
 
-def generate_balance_chart_with_qr_bytes(df_balance: pd.DataFrame, qr_bytes: bytes) -> bytes:
-    fig, ax = plt.subplots()
-    if not df_balance.empty:
-        ax.bar(df_balance["Name"], df_balance["FinalBalance"])
-    ax.set_title("Final Balances")
-    ax.set_ylabel("Amount")
+def generate_balance_chart_with_qr_bytes(df_balance, qr_bytes):
+    import matplotlib.pyplot as plt
+    from io import BytesIO
 
-    # add QR to the figure
+    fig, (ax_chart, ax_qr) = plt.subplots(
+        1, 2, figsize=(8, 4),
+        gridspec_kw={"width_ratios": [3, 1]}
+    )
+
+    # --- Bar chart
+    if not df_balance.empty:
+        ax_chart.bar(df_balance["Name"], df_balance["FinalBalance"])
+    ax_chart.set_title("Final Balances")
+    ax_chart.set_ylabel("Amount")
+    ax_chart.grid(axis="y", alpha=0.3)
+
+    # --- QR code panel
     qr_img = plt.imread(BytesIO(qr_bytes))
-    fig.figimage(qr_img, xo=50, yo=50, alpha=0.9)
+    ax_qr.imshow(qr_img)
+    ax_qr.axis("off")
+    ax_qr.set_title("Settlement QR", fontsize=10)
+
+    plt.tight_layout()
 
     buf = BytesIO()
-    plt.savefig(buf, format="PNG", bbox_inches="tight")
+    plt.savefig(buf, format="PNG", dpi=150)
     plt.close(fig)
     buf.seek(0)
+
     return buf.getvalue()

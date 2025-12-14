@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_file, render_template_string
 from io import BytesIO
+
 from settlement_engine import (
     calculate_balances,
     calculate_settlements,
@@ -19,7 +20,7 @@ HTML_UI = """
         body { font-family: Arial; max-width: 900px; margin: 30px auto; }
         input, button { padding: 6px 10px; margin: 4px; }
         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        th, td { border: 1px solid #aaa; padding: 6px; text-align: left; }
+        th, td { border: 1px solid #aaa; padding: 6px; }
         img { margin-top: 15px; }
     </style>
 </head>
@@ -97,11 +98,11 @@ async function calculate() {
     settlements.innerHTML = "";
 
     data.balances.forEach(b => {
-        balances.innerHTML += `<tr><td>${b.name}</td><td>${b.finalBalance}</td></tr>`;
+        balances.innerHTML += `<tr><td>${b.Name}</td><td>${b.FinalBalance}</td></tr>`;
     });
 
     data.settlements.forEach(s => {
-        settlements.innerHTML += `<tr><td>${s.from}</td><td>${s.to}</td><td>${s.amount}</td></tr>`;
+        settlements.innerHTML += `<tr><td>${s.From}</td><td>${s.To}</td><td>${s.Amount}</td></tr>`;
     });
 }
 
@@ -135,7 +136,7 @@ async function showChart() {
         body: JSON.stringify({transactions})
     });
     const blob = await res.blob();
-    chart.innerHTML = `<img src="${URL.createObjectURL(blob)}" width="400">`;
+    chart.innerHTML = `<img src="${URL.createObjectURL(blob)}" width="450">`;
 }
 
 function resetAll() {
@@ -158,35 +159,31 @@ def browser_ui():
 
 
 def parse_transactions(json_data):
-    tx_raw = json_data.get("transactions", [])
-    transactions = []
-    for item in tx_raw:
-        transactions.append({
-            "debtor": item["debtor"],
-            "creditor": item["creditor"],
-            "amount": float(item["amount"])
-        })
-    return transactions
+    return [
+        {
+            "debtor": t["debtor"],
+            "creditor": t["creditor"],
+            "amount": float(t["amount"]),
+        }
+        for t in json_data.get("transactions", [])
+    ]
 
 
 @app.route("/api/calculate", methods=["POST"])
 def api_calculate():
-    data = request.get_json(force=True)
-    transactions = parse_transactions(data)
-
+    transactions = parse_transactions(request.get_json(force=True))
     df_balance = calculate_balances(transactions)
     df_settlement = calculate_settlements(df_balance)
 
     return jsonify({
         "balances": df_balance.to_dict(orient="records"),
-        "settlements": df_settlement.to_dict(orient="records")
+        "settlements": df_settlement.to_dict(orient="records"),
     })
 
 
 @app.route("/api/qr", methods=["POST"])
 def api_qr():
-    data = request.get_json(force=True)
-    transactions = parse_transactions(data)
+    transactions = parse_transactions(request.get_json(force=True))
     df_balance = calculate_balances(transactions)
     df_settlement = calculate_settlements(df_balance)
     qr_bytes = generate_settlement_qr_bytes(df_settlement)
@@ -196,31 +193,32 @@ def api_qr():
 
 @app.route("/api/invoice-pdf", methods=["POST"])
 def api_invoice_pdf():
-    data = request.get_json(force=True)
-    transactions = parse_transactions(data)
+    transactions = parse_transactions(request.get_json(force=True))
     df_balance = calculate_balances(transactions)
     df_settlement = calculate_settlements(df_balance)
+
     qr_bytes = generate_settlement_qr_bytes(df_settlement)
     pdf_bytes = generate_invoice_pdf_bytes(df_settlement, qr_bytes)
 
-    return send_file(BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True)
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="settlement_invoice.pdf",
+    )
 
 
 @app.route("/api/balance-chart", methods=["POST"])
 def api_balance_chart():
-    data = request.get_json(force=True)
-    transactions = parse_transactions(data)
+    transactions = parse_transactions(request.get_json(force=True))
     df_balance = calculate_balances(transactions)
-    df_settlement = calculate_settlements(df_balance)
-    qr_bytes = generate_settlement_qr_bytes(df_settlement)
+    qr_bytes = generate_settlement_qr_bytes(calculate_settlements(df_balance))
     chart_bytes = generate_balance_chart_with_qr_bytes(df_balance, qr_bytes)
 
     return send_file(BytesIO(chart_bytes), mimetype="image/png")
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True
-    )
+    app.run(host="0.0.0.0",
+            port=5000,
+            debug=True)
